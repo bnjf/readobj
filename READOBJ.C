@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdint.h>
 
 /********************************
 * Microsoft Object Record Types *
@@ -101,10 +102,10 @@
 /***********
 * Typedefs *
 ************/
-typedef unsigned char byte;
-typedef unsigned char * p_byte;     /* pointer to a byte */
-typedef unsigned short word;
-typedef unsigned short * p_word;    /* pointer to a word */
+typedef uint8_t byte;
+typedef uint8_t * p_byte;     /* pointer to a byte */
+typedef uint16_t word;
+typedef uint16_t * p_word;    /* pointer to a word */
 
 /****************
 * File pointers *
@@ -114,9 +115,9 @@ FILE *fp1;              /* object code file pointer */
 /*******************
 * Global variables *
 *******************/
-word stoppit;          /* flag for end of file */
+int stoppit;          /* flag for end of file */
 word i=0,j=0,k=0;      /* misc index counters */
-byte c=0,c1=0,c2=0;    /* misc unsigned char variables */
+int c=0,c1=0,c2=0;    /* misc unsigned char variables */
 word reclen=0;         /* length of record */
 byte num_bytes=0;      /* length of string passed */
 word chksum_count=0;   /* total bytes read for a record */
@@ -131,7 +132,7 @@ byte Snames_total=0;   /* number of SNAMES entries */
                        /* storage for SNAMES data */
 word Snames [MAX_SNAME_ENTRIES] [SNAME_OVL+1] =
 { {0,0,0} };
-byte *align_msg[] =    /* SEGDEF align messages */
+const char *align_msg[] =    /* SEGDEF align messages */
 {
   "0 Absolute segment",
   "1 Relocatable and byte-aligned segment",
@@ -139,7 +140,7 @@ byte *align_msg[] =    /* SEGDEF align messages */
   "3 Relocatable and paragraph-aligned segment",
   "4 Relocatable and page-aligned segment",
 };
-byte *combine_msg[] =  /* SEGDEF combine messages */
+const char *combine_msg[] =  /* SEGDEF combine messages */
 {
   "0 Private segment",
   "1 ?",
@@ -162,9 +163,7 @@ byte chr_buff[256];    /* string buffer */
 *             Document # 8411-310-02                          *
 *             Part # 036-014-012                              *
 ***************************************************************/
-word main(argc,argv)
-word argc;
-byte *argv[];
+int main(int argc,char *argv[])
 {
 void do_blkdef(void);
 void do_blkend(void);
@@ -184,7 +183,6 @@ void do_segdef(void);
 void do_theadr(void);
 void do_typdef(void);
 void do_unimplt(void);
-void exit(int);
 byte get_obj_byte(void);
 
 if (argc != NUM_ARGS)
@@ -274,7 +272,7 @@ return(0);
 ************************************************/
 byte get_obj_byte()
 {
-word w;
+int w;
  c = (byte)(w =  getc(fp1));
  stoppit = (w == EOF);
  chksum_count = chksum_count + c;
@@ -284,8 +282,7 @@ word w;
 /************************************************
 * get a word from the object code file pointer  *
 ************************************************/
-word get_obj_word(swap)
-byte swap;
+word get_obj_word(byte swap)
 {                                /* input -  Hi Lo */
  if (swap)
   {
@@ -337,8 +334,7 @@ byte get_obj_byte(void);
 /******************************
 * gather up an unsized string into chr_buff *
 ******************************/
-void get_u_string(num_chars)
-byte num_chars;
+void get_u_string(byte num_chars)
 {
 byte get_obj_byte(void);
 
@@ -370,8 +366,7 @@ byte get_obj_byte(void);
 /******************************
 * get index value (1 or 2 bytes) *
 ******************************/
-byte get_index(index)
-word *index;
+byte get_index(word *index)
 {
 byte get_obj_byte(void);
 
@@ -394,13 +389,12 @@ byte get_obj_byte(void);
 /***************************************************
 * Get a COMDEF length, 1 2 3 4 or 5 bytes.         *
 ***************************************************/
-byte get_varlength(tolong)
-long *tolong;
+byte get_varlength(long *tolong)
 {
 byte numform, used, toget, tozero;
 byte *zapper;
 
-        zapper = (char *)tolong;
+        zapper = (byte *)tolong;
         numform = get_obj_byte();
         used = 1;
         if (numform < 128)
@@ -434,12 +428,11 @@ byte *zapper;
 /*********************************************************
 * print out an Lname if there is one of the given index  *
 **********************************************************/
-void put_name(inx)
-word inx;
+void put_name(word inx)
 {
     if (inx)
         if (inx < Lnames_index)
-            printf("%s\n",Lnames[inx]);
+            printf("%s\n",(char *)Lnames[inx]);
         else
             printf("???\n");
     else
@@ -449,8 +442,7 @@ word inx;
 /***********************************************
 * dump a given number of record bytes in hex   *
 ***********************************************/
-void dumpn(cnt)
-word cnt;
+void dumpn(word cnt)
 {
 byte b[16];
 word adr, p, q;
@@ -483,7 +475,7 @@ word get_reclen(void);
  printf("\n80h: THEADR");
  reclen = get_reclen();
  get_s_string();
- printf("\tmodule = %s\n",chr_buff);
+ printf("\tmodule = %s\n",(char *)chr_buff);
  do_checksum();
  return;
 }
@@ -500,7 +492,7 @@ word get_reclen(void);
 word get_obj_word(byte);
 void get_u_string(byte);
 byte get_s_string(void);
-byte purge,list,class;
+byte purge,list,_class;
 word ordinal;
 
  printf("88h: COMENT");
@@ -508,15 +500,15 @@ word ordinal;
  c1 = get_obj_byte();
  purge = (c1 & BIT7) >> 7;
  list = (c1 & BIT6) >> 6;
- class = get_obj_byte();
+ _class = get_obj_byte();
  printf("\tclass = %01x, purge = %01x, list = %01x\n",
-                  class,        purge,         list);
- if (class != 0xa0)
+                 _class,        purge,         list);
+ if (_class != 0xa0)
  {
      num_bytes = reclen - 2; /* adust for flag, class */
      get_u_string(num_bytes);
-     printf("\tComment = \"%s\"\n",chr_buff);
-     switch (class)
+     printf("\tComment = \"%s\"\n",(char *)chr_buff);
+     switch (_class)
      {
          case 0x00: printf("\t\tcompiler name, /dsalloc\n"); break;
          case 0x9c: printf("\t\tDOS version\n"); break;
@@ -530,15 +522,15 @@ word ordinal;
  else /* dynamic link import record */
  {
         list = get_obj_byte();
-        class = get_obj_byte();
-        printf("\tdynalink import, flag1 %02x, flag2 %02x\n",list,class);
+        _class = get_obj_byte();
+        printf("\tdynalink import, flag1 %02x, flag2 %02x\n",list,_class);
         num_bytes = get_obj_byte();
         get_u_string(num_bytes);
-        printf("\tName = %s",chr_buff);
+        printf("\tName = %s",(char *)chr_buff);
         num_bytes = get_obj_byte();
         get_u_string(num_bytes);
-        printf(", Module = %s",chr_buff);
-        if (class)
+        printf(", Module = %s",(char *)chr_buff);
+        if (_class)
         {
             ordinal = get_obj_word(SWAP);
             printf(", Ordinal %d\n",ordinal);
@@ -547,7 +539,7 @@ word ordinal;
         {
             num_bytes = get_obj_byte();
             get_u_string(num_bytes);
-            printf(", Entry = %s\n",chr_buff);
+            printf(", Entry = %s\n",(char *)chr_buff);
         }
  }
  do_checksum();
@@ -587,7 +579,7 @@ word sum,name_index;
             i=2;
         }
         Lnames[name_index][i] = '\0';
-        printf("\t%02x  %s", name_index, Lnames[name_index]);
+        printf("\t%02x  %s", name_index, (char *)Lnames[name_index]);
         if (name_index != 0)
         {
             Lnames_index++;
@@ -622,7 +614,7 @@ word seg_index,class_index,ovl_index;
  align = (c & (BIT7+BIT6+BIT5)) >> 5;
  combine = (c & (BIT4+BIT3+BIT2)) >> 2;
  big = (c & BIT1) >> 1;
- printf("\tAlignment = %s\n",align_msg[align]);
+ printf("\tAlignment = %s\n",(char *)align_msg[align]);
  if (align == 0)
   {
    abs_fn = get_obj_word(SWAP);
@@ -630,7 +622,7 @@ word seg_index,class_index,ovl_index;
    printf("\t\tFrame = %04x : Offset = %04x\n",
           abs_fn,abs_off);
   }
- printf("\tCombine = %s\n",combine_msg[combine]);
+ printf("\tCombine = %s\n",(char *)combine_msg[combine]);
  seg_len = get_obj_word(SWAP);
 
  printf("\tSegment length =");
@@ -722,7 +714,7 @@ word type_index;
    get_u_string(num_bytes);
    sum += get_index(&type_index);
    printf("\ttype %04x, name = %s\n",
-          type_index,chr_buff);
+          type_index,(char *)chr_buff);
   }
  do_checksum();
  return;
@@ -759,12 +751,12 @@ long num_elem, size_elem;
                 sum += get_varlength(&num_elem);
         sum += get_varlength(&size_elem);
         printf("\ttype = %04x, segtype = %02x, name = %s\n",
-                    type_index,       seg_type,     chr_buff);
+                    type_index,       seg_type,     (char *)chr_buff);
         if (seg_type == 0x61)
-                printf("\t\t %l items of length %l\n",
+                printf("\t\t %lu items of length %lu\n",
                           num_elem,        size_elem);
         else
-                printf("\t\titem size %l\n",size_elem);
+                printf("\t\titem size %lu\n",size_elem);
  }
  do_checksum();
  return;
@@ -899,7 +891,7 @@ word grp, seg, frame, type, sum;
      sum += 2;
      sum += get_index(&type);
      printf("\t\ttype %04x, offset %04x, name = %s\n",
-                        type,         i,        chr_buff);
+                        type,         i,        (char *)chr_buff);
  }
  do_checksum();
  return;
@@ -939,7 +931,7 @@ word grp, seg, frame, type, sum;
      sum += 2;
      sum += get_index(&type);
      printf("\t\ttype %04x, offset %04x, name = %s\n",
-                        type,         i,        chr_buff);
+                        type,         i,        (char *)chr_buff);
  }
  do_checksum();
  return;
@@ -1025,4 +1017,3 @@ word dumplen;
  do_checksum();
  return;
 }
-                                                                                                                                                                                                           
