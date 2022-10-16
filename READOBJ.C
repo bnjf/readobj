@@ -117,7 +117,7 @@ FILE *fp1;              /* object code file pointer */
 *******************/
 int stoppit;          /* flag for end of file */
 word i=0,j=0,k=0;      /* misc index counters */
-int c=0,c1=0,c2=0;    /* misc unsigned char variables */
+byte c=0,c1=0,c2=0;    /* misc unsigned char variables */
 word reclen=0;         /* length of record */
 byte num_bytes=0;      /* length of string passed */
 word chksum_count=0;   /* total bytes read for a record */
